@@ -1,0 +1,1936 @@
+--- FILE: build.gradle.kts (ROOT) ---
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+plugins {
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.kotlin.compose) apply false
+    alias(libs.plugins.ksp) apply false
+}
+
+--- FILE: settings.gradle.kts ---
+pluginManagement {
+    repositories {
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "dotlog"
+include(":app")
+
+
+--- FILE: gradle.properties ---
+# Project-wide Gradle settings.
+# IDE (e.g. Android Studio) users:
+# Gradle settings configured through the IDE *will override*
+# any settings specified in this file.
+# For more details on how to configure your build environment visit
+# http://www.gradle.org/docs/current/userguide/build_environment.html
+# Specifies the JVM arguments used for the daemon process.
+# The setting is particularly useful for tweaking memory settings.
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+# When configured, Gradle will run in incubating parallel mode.
+# This option should only be used with decoupled projects. For more details, visit
+# https://developer.android.com/r/tools/gradle-multi-project-decoupled-projects
+# org.gradle.parallel=true
+# When enabled, the Configuration Cache allows Gradle to skip the configuration
+# phase entirely if nothing that affects the build configuration (such as build scripts)
+# has changed. Additionally, Gradle applies performance optimizations to task execution.
+org.gradle.configuration-cache=true
+# Kotlin code style for this project: "official" or "obsolete":
+kotlin.code.style=official
+android.disallowKotlinSourceSets=false
+
+
+--- FILE: gradle/libs.versions.toml ---
+[versions]
+agp = "9.3.1"
+coreKtx = "1.19.0"
+junit = "4.13.2"
+junitVersion = "1.3.0"
+espressoCore = "3.7.0"
+lifecycleRuntimeKtx = "2.11.0"
+lifecycleViewModelCompose = "2.11.0"
+activityCompose = "1.13.0"
+kotlin = "2.2.10"
+composeBom = "2026.02.01"
+room = "2.8.4"
+retrofit = "3.0.0"
+okhttp = "5.4.0"
+osmdroid = "6.1.20"
+playServicesLocation = "21.4.0"
+ksp = "2.2.10-2.0.2"
+kotlinxCoroutinesPlayServices = "1.11.0"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleViewModelCompose" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
+androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+osmdroid = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "kotlinxCoroutinesPlayServices" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+
+
+--- FILE: app/build.gradle.kts ---
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
+}
+
+android {
+    namespace = "com.example.dotlog"
+    compileSdk = 37
+
+    defaultConfig {
+        applicationId = "com.example.dotlog"
+        minSdk = 29
+        targetSdk = 36
+        versionCode = 1
+        versionName = "1.0"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            optimization {
+                enable = false
+            }
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+    buildFeatures {
+        compose = true
+    }
+}
+
+dependencies {
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.compose.material.icons.core)
+    implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    // Room
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+
+    // Networking
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.gson)
+    implementation(libs.okhttp)
+
+    // Maps & Location
+    implementation(libs.osmdroid)
+    implementation(libs.play.services.location)
+    implementation(libs.kotlinx.coroutines.play.services)
+
+    testImplementation(libs.junit)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.junit)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+}
+
+--- FILE: app/src/main/AndroidManifest.xml ---
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <application
+        android:name=".DotlogApplication"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Dotlog">
+
+        <service
+            android:name=".service.LocationService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
+        <receiver
+            android:name=".service.ActivityTransitionReceiver"
+            android:exported="false" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Dotlog"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
+
+--- FILE: AGENTS.md ---
+# AGENTS.md — Location Tracker
+
+Persistent project memory. Update this as conventions/gotchas emerge — don't let
+lessons live only in chat history.
+
+## Project Shape
+
+- Single-screen Android app, MVVM, no navigation graph
+- Package layout (suggested):
+  - `data/` — Room entity/DAO, LocationRepository, OverpassApi (Retrofit)
+  - `service/` — foreground Service, ActivityRecognition receiver
+  - `ui/` — one Composable screen + ViewModel
+- minSdk 29 (Android 10) — do not lower without re-adding permission fallback logic
+
+## Rules / Footguns
+
+- **Duplicate visit radius is 100m (Haversine).** Don't change without updating the
+  corresponding unit test.
+- **POI lookup radius widens 200m → 500m → 1km, then falls back to "Unnamed area".**
+  Don't silently change these thresholds — they were a deliberate product decision.
+- **Visit writes happen in `onStop()`**, not `onPause()` or `onDestroy()` — this is
+  intentional (matches the "app killed/backgrounded" requirement exactly).
+- **POST_NOTIFICATIONS is only requested on API 33+.** Below that, don't gate the
+  foreground service on this permission or it'll never start on older devices.
+- **Overpass public instance is rate-limited.** Don't add polling/retry loops against
+  it — lookups are already infrequent (tied to movement events), keep it that way.
+- English only for MVP — don't hardcode strings in a way that blocks future Arabic
+  support (still use `strings.xml`, just no translation work yet).
+
+## Build → Verify → Fix Loop
+
+1. `./gradlew assembleDebug` — must succeed with zero warnings treated as new
+2. Manual on-device check for the step just built (see PLAN.md per-step verification)
+3. If broken: fix, rebuild, re-verify
+4. Exit condition: **max 3 fix attempts per step** before stopping to reassess the
+   approach rather than continuing to patch
+
+## Testing Commands
+
+- Unit tests: `./gradlew testDebugUnitTest`
+- (Add instrumented test command here once/if added)
+
+## Known Gotchas Log
+
+- **osmdroid Tile Block:** OpenStreetMap servers block generic or missing `User-Agent` headers with a 403. Must set a unique `userAgentValue` (ideally `packageName`) in `Application.onCreate()` before the map is initialized.
+- **osmdroid Storage on Android 10+:** Use the app's internal cache directory (`context.cacheDir`) for `osmdroidBasePath` and `osmdroidTileCache` to avoid scoped storage permission issues.
+- **Library compileSdk Requirements:** Modern `androidx` libraries (like `lifecycle-viewmodel-compose:2.11.0`) require `compileSdk 37`. If build fails with AAR metadata errors, bump `compileSdk` in `app/build.gradle.kts`.
+- **KSP Kotlin Source Sets:** Built-in Kotlin in AGP 9.0+ may conflict with KSP source set injection. If build fails with `Using kotlin.sourceSets DSL to add Kotlin sources is not allowed`, set `android.disallowKotlinSourceSets=false` in `gradle.properties`.
+
+
+--- FILE: PLAN.md ---
+# PLAN.md — Location Tracker (Execution Plan)
+
+Derived from `2026-07-29-location-tracker-design.md`. Disposable — safe to delete
+once this feature set is fully shipped. Lasting conventions belong in `AGENTS.md`.
+
+Each step lists: what to build, how to verify it, and whether it's safe to delegate
+to a cheaper/weaker model or needs full attention.
+
+---
+
+## Step 1 — Project scaffold + permissions manifest
+
+- New Compose project, `minSdk = 29`
+- Declare all manifest permissions (fine/coarse/background location, activity
+  recognition, notifications-conditional)
+- Add dependencies: Room, Retrofit/OkHttp, osmdroid, Play Services Location,
+  Play Services Activity Recognition
+
+**Verify:** project builds and installs on an emulator with no manifest merger errors.
+**Model:** safe for a weaker/cheap model — mechanical setup, low judgment required.
+
+---
+
+## Step 2 — Data layer: `Visit` entity + DAO + repository
+
+- Room entity/DAO exactly as specced (id, latitude, longitude, placeName, timestamp)
+- `VisitRepository` wrapping the DAO, exposing `Flow<List<Visit>>`
+- Haversine distance helper function
+- Duplicate-check logic: given a new lat/lng, query most recent visit, compare
+  distance, decide insert vs update
+
+**Verify:** unit tests for Haversine distance + duplicate-check logic (in-range,
+out-of-range, exactly-at-boundary cases). This is pure logic — no device needed.
+**Model:** safe for a weaker model, but review the boundary-condition test cases
+yourself — this is exactly the kind of subtle logic that "AI reviewing its own
+work in isolation won't catch" per your notes' Stage 4.
+
+---
+
+## Step 3 — Location layer: `LocationRepository` + `ActivityRecognitionClient`
+
+- `LocationRepository` wrapping `FusedLocationProviderClient`, exposing current
+  location as a `Flow`/callback
+- Activity Recognition transition receiver: on `WALKING`/`IN_VEHICLE` transition,
+  trigger a fresh location fetch; on `STILL`, do nothing further
+- Runtime permission request flow (fine/coarse/background/activity recognition),
+  with rationale UI before each system prompt
+
+**Verify:** manual, on a real device — emulator location/activity-recognition
+simulation is unreliable for this. Walk around with the device, confirm location
+updates fire on movement and stop firing when stationary.
+**Model:** needs your full attention — permission flows and real sensor behavior
+are exactly the "device/manual-testing territory" this doc flags as fiddly.
+**Exit condition:** max 3 fix attempts on any single permission-flow bug before
+stepping back to re-check the permission declarations/manifest rather than
+continuing to patch the request code.
+
+---
+
+## Step 4 — Foreground service
+
+- Foreground `Service` with persistent notification, started when app backgrounds
+  while tracking is active
+- Wires into the location + activity recognition layers from Step 3
+- Stops cleanly when tracking is explicitly ended
+
+**Verify:** manual — start tracking, background the app (home button, switch apps),
+confirm notification persists and location/visit logging continues; confirm
+`onStop()` visit-write still fires correctly when the app is killed outright.
+**Model:** needs your full attention — service lifecycle bugs are easy to miss
+and hard to unit test.
+
+---
+
+## Step 5 — POI lookup: Overpass integration
+
+- Retrofit interface for Overpass API
+- Radius-widening query logic (200m → 500m → 1km → "Unnamed area")
+- Wire into `ScreenState.currentPlaceName` (live, not persisted until `onStop()`)
+
+**Verify:** unit test the radius-widening fallback chain with mocked API responses
+(empty at 200m/500m, found at 1km; empty at all three). Manual spot-check with
+real coordinates for at least one dense-POI area and one sparse area.
+**Model:** safe for a weaker model for the Retrofit plumbing; review the fallback
+chain logic yourself.
+
+---
+
+## Step 6 — UI: map + info panel + ViewModel wiring
+
+- osmdroid `MapView` in `AndroidView`, blue dot for current location
+- History markers (secondary color) when `showHistoryOnMap` is true
+- Info panel: current location card, "Last visits" list with pin-icon toggle
+- Tap-to-zoom on list items
+- `ViewModel` merging location + visits Flow into `ScreenState`
+
+**Verify:** manual UI walkthrough against the original prototype — confirm layout
+matches, toggle shows/hides markers, tapping a visit zooms the map correctly.
+**Model:** safe for a weaker model for boilerplate Composables; review the
+ViewModel state-merging logic yourself (subtle Flow-combination bugs are common).
+
+---
+
+## Step 7 — Full integration pass
+
+- Fresh install, walk through: first launch → permission prompts → live tracking →
+  background app → force-stop → reopen → confirm a visit was logged → toggle
+  history markers → tap a past visit to zoom
+- Test with no network (tiles cached vs not, POI falls back to "Unnamed area")
+- Test with permissions denied (inline message + settings link works)
+
+**Verify:** this step *is* the verification — full manual walkthrough end to end.
+**Model:** you, fully — this is the review stage from your notes' §4, done by hand
+before calling the feature done.
+
+---
+
+## Notes on parallelization
+
+Given this is a single-developer practice project (not a multi-agent orchestration
+job), the orchestrator-worker/git-worktree patterns from your notes are probably
+overkill here — steps 2, 3, and 5 are independent enough that you *could* run them
+in parallel worktrees if you wanted the practice, but there's no real time pressure
+forcing that. Sequential is simpler and fine for this scope.
+
+## Exit Conditions Summary
+
+- Any step: max 3 fix attempts before reassessing approach (per `AGENTS.md`)
+- Step 3 & 4 (permissions/service): stop and re-verify manifest/permission
+  declarations rather than continuing to patch request code past 3 attempts
+
+
+--- FILE: app/src/main/java/com/example/dotlog/DotlogApplication.kt ---
+package com.example.dotlog
+
+import android.app.Application
+import com.example.dotlog.data.AppDatabase
+import com.example.dotlog.data.PoiRepository
+import com.example.dotlog.data.VisitRepository
+import org.osmdroid.config.Configuration
+import java.io.File
+
+class DotlogApplication : Application() {
+    val database by lazy { AppDatabase.getDatabase(this) }
+    val repository by lazy { VisitRepository(database.visitDao()) }
+    val poiRepository by lazy { PoiRepository.create() }
+
+    override fun onCreate() {
+        super.onCreate()
+
+        val osmConfig = Configuration.getInstance()
+        val prefs = getSharedPreferences("osmdroid", MODE_PRIVATE)
+        osmConfig.load(this, prefs)
+
+        osmConfig.userAgentValue = "Dotlog Location Tracker/1.0 (https://github.com/baraaml/dotlog; contact: baraalearnsml@gmail.com)"
+        osmConfig.tileDownloadThreads = 2
+        osmConfig.save(this, prefs)
+
+        val baseDir = File(cacheDir, "osmdroid")
+        if (!baseDir.exists()) baseDir.mkdirs()
+        osmConfig.osmdroidBasePath = baseDir
+
+        val tileCache = File(baseDir, "tiles")
+        if (!tileCache.exists()) tileCache.mkdirs()
+        osmConfig.osmdroidTileCache = tileCache
+    }
+}
+
+--- FILE: app/src/main/java/com/example/dotlog/MainActivity.kt ---
+package com.example.dotlog
+
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.provider.Settings
+import androidx.activity.ComponentActivity
+import java.util.Locale
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.dotlog.service.LocationService
+import com.example.dotlog.ui.MainViewModel
+import com.example.dotlog.ui.MapViewCompose
+import com.example.dotlog.ui.VisitsList
+import com.example.dotlog.ui.theme.DotlogTheme
+import com.example.dotlog.ui.theme.SuccessGreen
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        enableEdgeToEdge()
+        setContent {
+            DotlogTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    MainScreen()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MainScreen(viewModel: MainViewModel = viewModel()) {
+    val context = LocalContext.current
+    var permissionsGranted by remember {
+        mutableStateOf(checkInitialPermissions(context))
+    }
+
+    val isTracking by viewModel.isTracking.collectAsState()
+    val location by viewModel.currentLocation.collectAsState()
+    val placeName by viewModel.currentPlaceName.collectAsState()
+    val visits by viewModel.allVisits.collectAsState()
+    val showHistory by viewModel.showHistoryOnMap.collectAsState()
+    val zoomTarget by viewModel.zoomTarget.collectAsState()
+
+    // Handle backgrounding per requirement
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                if (viewModel.isTracking.value) {
+                    // Capture visit on backgrounding
+                    viewModel.logCurrentVisit()
+                    // Start foreground service for background survival
+                    val intent = Intent(context, LocationService::class.java)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        context.startForegroundService(intent)
+                    } else {
+                        context.startService(intent)
+                    }
+                }
+            } else if (event == androidx.lifecycle.Lifecycle.Event.ON_START) {
+                // Refresh permission state when returning to foreground
+                permissionsGranted = checkInitialPermissions(context)
+                // Stop foreground service when returning to foreground
+                context.stopService(Intent(context, LocationService::class.java))
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    if (!permissionsGranted) {
+        PermissionRequestScreen {
+            permissionsGranted = checkInitialPermissions(context)
+        }
+    } else {
+        @OptIn(ExperimentalMaterial3Api::class)
+        val scaffoldState = rememberBottomSheetScaffoldState()
+
+        @OptIn(ExperimentalMaterial3Api::class)
+        BottomSheetScaffold(
+            scaffoldState = scaffoldState,
+            sheetPeekHeight = 120.dp,
+            sheetShape = MaterialTheme.shapes.extraLarge,
+            sheetContainerColor = MaterialTheme.colorScheme.surface,
+            sheetContent = {
+                VisitsList(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 400.dp),
+                    visits = visits,
+                    showHistoryOnMap = showHistory,
+                    onToggleHistory = { viewModel.toggleHistoryOnMap() },
+                    onVisitClick = { viewModel.zoomToVisit(it.latitude, it.longitude) }
+                )
+            }
+        ) { innerPadding ->
+            Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                // Full Screen Map
+                MapViewCompose(
+                    modifier = Modifier.fillMaxSize(),
+                    currentLocation = location,
+                    visits = visits,
+                    showHistory = showHistory,
+                    zoomTarget = zoomTarget,
+                    onZoomConsumed = { viewModel.clearZoomTarget() }
+                )
+
+                // Floating Live POI Card (Top Zone)
+                Card(
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(16.dp)
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter),
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .background(
+                                    if (isTracking) SuccessGreen else Color.Gray,
+                                    shape = androidx.compose.foundation.shape.CircleShape
+                                )
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = if (isTracking) "Live Tracking" else "Tracking Paused",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = placeName,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                // Tracking Toggle (Bottom Zone - Thumb Friendly)
+                FloatingActionButton(
+                    onClick = { if (isTracking) viewModel.stopTracking() else viewModel.startTracking() },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 16.dp, bottom = 32.dp),
+                    containerColor = if (isTracking) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primary,
+                    shape = androidx.compose.foundation.shape.CircleShape
+                ) {
+                    Text(
+                        text = if (isTracking) "Stop" else "Start",
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PermissionRequestScreen(onPermissionsChanged: () -> Unit) {
+    val context = LocalContext.current
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        onPermissionsChanged()
+    }
+
+    val singleLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        onPermissionsChanged()
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Permissions Required",
+            style = MaterialTheme.typography.headlineMedium
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Dotlog needs location and activity recognition permissions to track your visits and movement efficiently.",
+            style = MaterialTheme.typography.bodyLarge
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(onClick = {
+            val permissions = mutableListOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                permissions.add(Manifest.permission.ACTIVITY_RECOGNITION)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            launcher.launch(permissions.toTypedArray())
+        }) {
+            Text("Grant Basic Permissions")
+        }
+
+        if (hasBasicPermissions(context) && !hasBackgroundLocation(context)) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "For background tracking, please also allow 'Allow all the time' in location settings.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Button(onClick = {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    singleLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                }
+            }) {
+                Text("Grant Background Location")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        TextButton(onClick = {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", context.packageName, null)
+            }
+            context.startActivity(intent)
+        }) {
+            Text("Open App Settings")
+        }
+    }
+}
+
+private fun checkInitialPermissions(context: android.content.Context): Boolean {
+    return hasBasicPermissions(context) && hasBackgroundLocation(context)
+}
+
+private fun hasBasicPermissions(context: android.content.Context): Boolean {
+    val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    val activity = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED
+    } else true
+    return fine && activity
+}
+
+private fun hasBackgroundLocation(context: android.content.Context): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
+    } else true
+}
+
+--- FILE: app/src/main/java/com/example/dotlog/data/AppDatabase.kt ---
+package com.example.dotlog.data
+
+import android.content.Context
+import androidx.room.Database
+import androidx.room.Room
+import androidx.room.RoomDatabase
+
+@Database(entities = [Visit::class], version = 1, exportSchema = false)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun visitDao(): VisitDao
+
+    companion object {
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
+        fun getDatabase(context: Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "dotlog_database"
+                ).build()
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
+}
+
+--- FILE: app/src/main/java/com/example/dotlog/data/LocationRepository.kt ---
+package com.example.dotlog.data
+
+import android.annotation.SuppressLint
+import android.content.Context
+import android.location.Location
+import android.os.Looper
+import com.google.android.gms.location.*
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
+
+class LocationRepository(context: Context) {
+    private val client = LocationServices.getFusedLocationProviderClient(context)
+
+    @SuppressLint("MissingPermission")
+    suspend fun getCurrentLocation(): Location? {
+        return try {
+            client.lastLocation.await() ?: client.getCurrentLocation(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                null
+            ).await()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun getLocationUpdates(intervalMillis: Long): Flow<Location> = callbackFlow {
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMillis)
+            .setMinUpdateIntervalMillis(intervalMillis / 2)
+            .build()
+
+        val callback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                result.lastLocation?.let { trySend(it) }
+            }
+        }
+
+        client.requestLocationUpdates(request, callback, Looper.getMainLooper())
+
+        awaitClose {
+            client.removeLocationUpdates(callback)
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    suspend fun requestSingleFreshLocation(): Location? {
+        return try {
+            client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).await()
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
+
+--- FILE: app/src/main/java/com/example/dotlog/data/LocationUtils.kt ---
+package com.example.dotlog.data
+
+import kotlin.math.*
+
+object LocationUtils {
+    /**
+     * Calculates the distance between two points in meters using the Haversine formula.
+     */
+    fun calculateDistance(
+        lat1: Double, lon1: Double,
+        lat2: Double, lon2: Double
+    ): Double {
+        val r = 6371000.0 // Earth radius in meters
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = sin(dLat / 2).pow(2) +
+                cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
+                sin(dLon / 2).pow(2)
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        return r * c
+    }
+}
+
+--- FILE: app/src/main/java/com/example/dotlog/data/OverpassApi.kt ---
+package com.example.dotlog.data
+
+import retrofit2.http.GET
+import retrofit2.http.Query
+
+interface OverpassApi {
+    @GET("api/interpreter")
+    suspend fun query(@Query("data") data: String): OverpassResponse
+
+    companion object {
+        const val BASE_URL = "https://overpass-api.de/"
+    }
+}
+
+data class OverpassResponse(
+    val elements: List<OverpassElement>
+)
+
+data class OverpassElement(
+    val type: String,
+    val id: Long,
+    val lat: Double?,
+    val lon: Double?,
+    val tags: Map<String, String>?
+)
+
+--- FILE: app/src/main/java/com/example/dotlog/data/PoiRepository.kt ---
+package com.example.dotlog.data
+
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+
+class PoiRepository(private val api: OverpassApi) {
+
+    suspend fun resolvePlaceName(lat: Double, lon: Double): String {
+        val radii = listOf(200, 500, 1000)
+
+        for (radius in radii) {
+            try {
+                val query = """
+                    [out:json];
+                    (
+                      node(around:$radius,$lat,$lon)[name];
+                      way(around:$radius,$lat,$lon)[name];
+                    );
+                    out tags center;
+                """.trimIndent()
+
+                val response = api.query(query)
+                val elementsWithNames = response.elements.filter { !it.tags?.get("name").isNullOrBlank() }
+
+                if (elementsWithNames.isNotEmpty()) {
+                    // Just pick the first one for now, as a simple heuristic
+                    return elementsWithNames.first().tags!!["name"] ?: "Unnamed area"
+                }
+            } catch (e: Exception) {
+                // If API fails, we could log it, but the spec says fall back to "Unnamed area" if nothing found.
+                // We'll continue to the next radius or fallback at the end.
+            }
+        }
+
+        return "Unnamed area"
+    }
+
+    companion object {
+        fun create(): PoiRepository {
+            val retrofit = Retrofit.Builder()
+                .baseUrl(OverpassApi.BASE_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+            return PoiRepository(retrofit.create(OverpassApi::class.java))
+        }
+    }
+}
+
+--- FILE: app/src/main/java/com/example/dotlog/data/Visit.kt ---
+package com.example.dotlog.data
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "visits")
+data class Visit(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val latitude: Double,
+    val longitude: Double,
+    val placeName: String,
+    val timestamp: Long
+)
+
+--- FILE: app/src/main/java/com/example/dotlog/data/VisitDao.kt ---
+package com.example.dotlog.data
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface VisitDao {
+    @Query("SELECT * FROM visits ORDER BY timestamp DESC")
+    fun getAllVisits(): Flow<List<Visit>>
+
+    @Query("SELECT * FROM visits ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getLatestVisit(): Visit?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(visit: Visit)
+
+    @Update
+    suspend fun update(visit: Visit)
+}
+
+--- FILE: app/src/main/java/com/example/dotlog/data/VisitRepository.kt ---
+package com.example.dotlog.data
+
+import kotlinx.coroutines.flow.Flow
+
+class VisitRepository(private val visitDao: VisitDao) {
+    val allVisits: Flow<List<Visit>> = visitDao.getAllVisits()
+
+    suspend fun addVisit(latitude: Double, longitude: Double, placeName: String, timestamp: Long) {
+        val latestVisit = visitDao.getLatestVisit()
+
+        if (latestVisit != null) {
+            val distance = LocationUtils.calculateDistance(
+                latestVisit.latitude, latestVisit.longitude,
+                latitude, longitude
+            )
+
+            if (distance <= 100.0) {
+                // Duplicate visit - update the existing one
+                val updatedVisit = latestVisit.copy(
+                    placeName = placeName,
+                    timestamp = timestamp
+                )
+                visitDao.update(updatedVisit)
+                return
+            }
+        }
+
+        // New visit - insert
+        val newVisit = Visit(
+            latitude = latitude,
+            longitude = longitude,
+            placeName = placeName,
+            timestamp = timestamp
+        )
+        visitDao.insert(newVisit)
+    }
+}
+
+--- FILE: app/src/main/java/com/example/dotlog/service/ActivityTransitionReceiver.kt ---
+package com.example.dotlog.service
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import com.google.android.gms.location.ActivityTransitionResult
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+
+class ActivityTransitionReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (ActivityTransitionResult.hasResult(intent)) {
+            val result = ActivityTransitionResult.extractResult(intent) ?: return
+            for (event in result.transitionEvents) {
+                _transitions.tryEmit(event.activityType to event.transitionType)
+            }
+        }
+    }
+
+    companion object {
+        private val _transitions = MutableSharedFlow<Pair<Int, Int>>(extraBufferCapacity = 10)
+        val transitions = _transitions.asSharedFlow()
+    }
+}
+
+--- FILE: app/src/main/java/com/example/dotlog/service/LocationService.kt ---
+package com.example.dotlog.service
+
+import android.app.*
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.os.IBinder
+import androidx.core.app.NotificationCompat
+import com.example.dotlog.DotlogApplication
+import com.example.dotlog.MainActivity
+import com.example.dotlog.R
+import com.example.dotlog.data.LocationRepository
+import com.google.android.gms.location.ActivityTransition
+import com.google.android.gms.location.DetectedActivity
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collectLatest
+
+class LocationService : Service() {
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private lateinit var locationRepository: LocationRepository
+
+    private var lastLatitude: Double? = null
+    private var lastLongitude: Double? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        locationRepository = LocationRepository(this)
+        createNotificationChannel()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        startForeground(NOTIFICATION_ID, createNotification())
+
+        serviceScope.launch {
+            ActivityTransitionReceiver.transitions.collect { (activityType, transitionType) ->
+                if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
+                    when (activityType) {
+                        DetectedActivity.WALKING, DetectedActivity.IN_VEHICLE -> {
+                            val location = locationRepository.requestSingleFreshLocation()
+                            location?.let {
+                                lastLatitude = it.latitude
+                                lastLongitude = it.longitude
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return START_STICKY
+    }
+
+    override fun onDestroy() {
+        // Final visit write on service stop
+        writeFinalVisit()
+        serviceScope.cancel()
+        super.onDestroy()
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        // If app is swiped away, we might want to log the visit now
+        writeFinalVisit()
+        stopSelf()
+    }
+
+    private fun writeFinalVisit() {
+        val lat = lastLatitude
+        val lon = lastLongitude
+        if (lat != null && lon != null) {
+            val app = (application as DotlogApplication)
+            val repository = app.repository
+            val poiRepository = app.poiRepository
+            // Use runBlocking with timeout to avoid hanging the system if network is slow/gone
+            runBlocking {
+                withTimeoutOrNull(3000L) {
+                    val placeName = poiRepository.resolvePlaceName(lat, lon)
+                    repository.addVisit(lat, lon, placeName, System.currentTimeMillis())
+                }
+            }
+        }
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Location Tracking",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun createNotification(): Notification {
+        val intent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, intent, PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Dotlog Tracking Active")
+            .setContentText("Keeping track of your movement in the background.")
+            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+            .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .build()
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    companion object {
+        private const val CHANNEL_ID = "location_tracking_channel"
+        private const val NOTIFICATION_ID = 1
+    }
+}
+
+--- FILE: app/src/main/java/com/example/dotlog/ui/MainViewModel.kt ---
+package com.example.dotlog.ui
+
+import android.annotation.SuppressLint
+import android.app.Application
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.location.Location
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.dotlog.DotlogApplication
+import com.example.dotlog.data.LocationRepository
+import com.example.dotlog.data.VisitRepository
+import com.example.dotlog.service.ActivityTransitionReceiver
+import com.google.android.gms.location.*
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+    private val locationRepository = LocationRepository(application)
+    private val visitRepository = (application as DotlogApplication).repository
+    private val poiRepository = (application as DotlogApplication).poiRepository
+    private val activityRecognitionClient = ActivityRecognition.getClient(application)
+
+    private val _currentLocation = MutableStateFlow<Location?>(null)
+    val currentLocation = _currentLocation.asStateFlow()
+
+    private val _currentPlaceName = MutableStateFlow("Searching...")
+    val currentPlaceName = _currentPlaceName.asStateFlow()
+
+    private val _isTracking = MutableStateFlow(false)
+    val isTracking = _isTracking.asStateFlow()
+
+    private val _showHistoryOnMap = MutableStateFlow(false)
+    val showHistoryOnMap = _showHistoryOnMap.asStateFlow()
+
+    val allVisits = visitRepository.allVisits.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    private val _zoomTarget = MutableStateFlow<Location?>(null)
+    val zoomTarget = _zoomTarget.asStateFlow()
+
+    private val transitionPendingIntent: PendingIntent by lazy {
+        val intent = Intent(application, ActivityTransitionReceiver::class.java)
+        PendingIntent.getBroadcast(
+            application,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+        )
+    }
+
+    init {
+        viewModelScope.launch {
+            ActivityTransitionReceiver.transitions.collect { (activityType, transitionType) ->
+                if (transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
+                    when (activityType) {
+                        DetectedActivity.WALKING, DetectedActivity.IN_VEHICLE -> {
+                            // Trigger fresh location on movement
+                            val location = locationRepository.requestSingleFreshLocation()
+                            _currentLocation.value = location
+                            location?.let {
+                                resolvePoi(it.latitude, it.longitude)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun resolvePoi(lat: Double, lon: Double) {
+        viewModelScope.launch {
+            _currentPlaceName.value = "Resolving..."
+            val name = poiRepository.resolvePlaceName(lat, lon)
+            _currentPlaceName.value = name
+        }
+    }
+
+    fun logCurrentVisit() {
+        val location = _currentLocation.value
+        val placeName = _currentPlaceName.value
+        if (location != null) {
+            viewModelScope.launch {
+                visitRepository.addVisit(
+                    location.latitude,
+                    location.longitude,
+                    placeName,
+                    System.currentTimeMillis()
+                )
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun startTracking() {
+        val transitions = listOf(
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.WALKING)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
+                .build(),
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.WALKING)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
+                .build(),
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.IN_VEHICLE)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
+                .build(),
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.IN_VEHICLE)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
+                .build(),
+            ActivityTransition.Builder()
+                .setActivityType(DetectedActivity.STILL)
+                .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
+                .build()
+        )
+
+        val request = ActivityTransitionRequest(transitions)
+        activityRecognitionClient.requestActivityTransitionUpdates(request, transitionPendingIntent)
+            .addOnSuccessListener { _isTracking.value = true }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun stopTracking() {
+        activityRecognitionClient.removeActivityTransitionUpdates(transitionPendingIntent)
+            .addOnSuccessListener { _isTracking.value = false }
+    }
+
+    fun toggleHistoryOnMap() {
+        _showHistoryOnMap.value = !_showHistoryOnMap.value
+    }
+
+    fun zoomToVisit(latitude: Double, longitude: Double) {
+        val loc = Location("zoom").apply {
+            this.latitude = latitude
+            this.longitude = longitude
+        }
+        _zoomTarget.value = loc
+    }
+
+    fun clearZoomTarget() {
+        _zoomTarget.value = null
+    }
+}
+
+--- FILE: app/src/main/java/com/example/dotlog/ui/MapViewCompose.kt ---
+package com.example.dotlog.ui
+
+import android.location.Location
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import com.example.dotlog.data.Visit
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.CustomZoomButtonsController
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.CopyrightOverlay
+import org.osmdroid.views.overlay.FolderOverlay
+import org.osmdroid.views.overlay.Marker
+
+@Composable
+fun MapViewCompose(
+    modifier: Modifier = Modifier,
+    currentLocation: Location?,
+    visits: List<Visit>,
+    showHistory: Boolean,
+    zoomTarget: Location?,
+    onZoomConsumed: () -> Unit
+) {
+    val context = LocalContext.current
+    val mapView = remember {
+        MapView(context).apply {
+            setTileSource(TileSourceFactory.MAPNIK)
+            setMultiTouchControls(true)
+            zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
+            controller.setZoom(15.0)
+
+            // Mandatory OSM attribution — added once and preserved
+            val copyrightOverlay = CopyrightOverlay(context)
+            copyrightOverlay.setAlignRight(true)
+            overlays.add(copyrightOverlay)
+        }
+    }
+
+    val currentMarker = remember {
+        Marker(mapView).apply {
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            title = "You are here"
+        }
+    }
+
+    val historyOverlay = remember { FolderOverlay() }
+
+    // Sync history markers when visits change
+    LaunchedEffect(visits) {
+        historyOverlay.items.clear()
+        visits.forEach { visit ->
+            val marker = Marker(mapView)
+            marker.position = GeoPoint(visit.latitude, visit.longitude)
+            marker.title = visit.placeName
+            marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            historyOverlay.add(marker)
+        }
+        mapView.invalidate()
+    }
+
+    // CRITICAL: Lifecycle hooks for osmdroid tile loading
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            mapView.onDetach()
+        }
+    }
+
+    AndroidView(
+        factory = { mapView },
+        modifier = modifier,
+        update = { view ->
+            // Preserve CopyrightOverlay and TilesOverlay; only manage our markers
+            val iter = view.overlays.iterator()
+            while (iter.hasNext()) {
+                val overlay = iter.next()
+                if (overlay !is CopyrightOverlay) {
+                    iter.remove()
+                }
+            }
+
+            currentLocation?.let {
+                currentMarker.position = GeoPoint(it.latitude, it.longitude)
+                view.overlays.add(currentMarker)
+            }
+
+            if (showHistory) {
+                view.overlays.add(historyOverlay)
+            }
+
+            view.invalidate()
+        }
+    )
+
+    // Live tracking recenter
+    LaunchedEffect(currentLocation) {
+        if (zoomTarget == null && currentLocation != null) {
+            mapView.controller.animateTo(
+                GeoPoint(currentLocation.latitude, currentLocation.longitude)
+            )
+        }
+    }
+
+    // Explicit zoom to visit
+    LaunchedEffect(zoomTarget) {
+        zoomTarget?.let {
+            mapView.controller.animateTo(GeoPoint(it.latitude, it.longitude))
+            mapView.controller.setZoom(18.0)
+            onZoomConsumed()
+        }
+    }
+}
+
+--- FILE: app/src/main/java/com/example/dotlog/ui/VisitsList.kt ---
+package com.example.dotlog.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.example.dotlog.data.Visit
+import java.text.SimpleDateFormat
+import java.util.*
+
+@Composable
+fun VisitsList(
+    modifier: Modifier = Modifier,
+    visits: List<Visit>,
+    showHistoryOnMap: Boolean,
+    onToggleHistory: () -> Unit,
+    onVisitClick: (Visit) -> Unit
+) {
+    Column(modifier = modifier.background(MaterialTheme.colorScheme.surface)) {
+        // Drag Handle indicator for BottomSheet
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(top = 12.dp, bottom = 8.dp)
+                .size(width = 32.dp, height = 4.dp)
+                .background(MaterialTheme.colorScheme.outlineVariant, CircleShape)
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "History",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${visits.size} visits recorded",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(
+                onClick = onToggleHistory,
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = if (showHistoryOnMap) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = "Toggle history markers",
+                    tint = if (showHistoryOnMap) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                )
+            }
+        }
+
+        if (visits.isEmpty()) {
+            EmptyVisitsState(Modifier.weight(1f))
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().weight(1f),
+                contentPadding = PaddingValues(bottom = 80.dp)
+            ) {
+                items(visits) { visit ->
+                    VisitItem(visit = visit, onClick = { onVisitClick(visit) })
+                }
+            }
+        }
+
+        // Compliance: Link to report map issues
+        val uriHandler = LocalUriHandler.current
+        TextButton(
+            onClick = { uriHandler.openUri("https://www.openstreetmap.org/fixthemap") },
+            modifier = Modifier.align(Alignment.CenterHorizontally).padding(8.dp)
+        ) {
+            Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+            Text("Report a map issue", style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
+fun VisitItem(visit: Visit, onClick: () -> Unit) {
+    val sdf = remember { SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()) }
+    val dateString = remember(visit.timestamp) { sdf.format(Date(visit.timestamp)) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Timeline indicator
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+            )
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .height(32.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant)
+            )
+        }
+
+        Spacer(Modifier.width(24.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = visit.placeName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = dateString,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Text(
+            text = String.format(Locale.getDefault(), "%.4f, %.4f", visit.latitude, visit.longitude),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.alpha(0.7f)
+        )
+    }
+}
+
+@Composable
+fun EmptyVisitsState(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.History,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.outlineVariant
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = "No visits yet",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "Your movement history will appear here once you start tracking.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.outline,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+    }
+}
+
+--- FILE: app/src/main/java/com/example/dotlog/ui/theme/Color.kt ---
+package com.example.dotlog.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+val Neutral90 = Color(0xFFF8F9FA)
+val Neutral10 = Color(0xFF1A1C1E)
+val ActionBlue = Color(0xFF0056D2)
+val ActionBlueVariant = Color(0xFFE3F2FD)
+val SuccessGreen = Color(0xFF2E7D32)
+
+
+--- FILE: app/src/main/java/com/example/dotlog/ui/theme/Theme.kt ---
+package com.example.dotlog.ui.theme
+
+import android.app.Activity
+import android.os.Build
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+
+private val DarkColorScheme = darkColorScheme(
+    primary = ActionBlue,
+    secondary = ActionBlueVariant,
+    tertiary = SuccessGreen,
+    background = Neutral10,
+    surface = Neutral10,
+    onBackground = Neutral90,
+    onSurface = Neutral90
+)
+
+private val LightColorScheme = lightColorScheme(
+    primary = ActionBlue,
+    secondary = ActionBlueVariant,
+    tertiary = SuccessGreen,
+    background = Neutral90,
+    surface = Color.White,
+    onBackground = Neutral10,
+    onSurface = Neutral10
+)
+
+@Composable
+fun DotlogTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    // Dynamic color is available on Android 12+
+    dynamicColor: Boolean = true,
+    content: @Composable () -> Unit
+) {
+    val colorScheme = when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            val context = LocalContext.current
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
+
+        darkTheme -> DarkColorScheme
+        else -> LightColorScheme
+    }
+
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = Typography,
+        content = content
+    )
+}
+
+--- FILE: app/src/main/java/com/example/dotlog/ui/theme/Type.kt ---
+package com.example.dotlog.ui.theme
+
+import androidx.compose.material3.Typography
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+
+// Set of Material typography styles to start with
+val Typography = Typography(
+    bodyLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        letterSpacing = 0.5.sp
+    )
+    /* Other default text styles to override
+    titleLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Normal,
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        letterSpacing = 0.sp
+    ),
+    labelSmall = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Medium,
+        fontSize = 11.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.5.sp
+    )
+    */
+)
+
+--- FILE: app/src/test/java/com/example/dotlog/ExampleUnitTest.kt ---
+package com.example.dotlog
+
+import org.junit.Test
+
+import org.junit.Assert.*
+
+/**
+ * Example local unit test, which will execute on the development machine (host).
+ *
+ * See [testing documentation](http://d.android.com/tools/testing).
+ */
+class ExampleUnitTest {
+    @Test
+    fun addition_isCorrect() {
+        assertEquals(4, 2 + 2)
+    }
+}
+
+--- FILE: app/src/test/java/com/example/dotlog/data/PoiRepositoryTest.kt ---
+package com.example.dotlog.data
+
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class PoiRepositoryTest {
+
+    @Test
+    fun `test resolvePlaceName widens radius`() = runBlocking {
+        val fakeApi = FakeOverpassApi()
+        val repository = PoiRepository(fakeApi)
+
+        // Case 1: Found at 200m
+        fakeApi.resultAtRadius = mapOf(200 to "Cafe 200")
+        assertEquals("Cafe 200", repository.resolvePlaceName(0.0, 0.0))
+
+        // Case 2: Not at 200m, found at 500m
+        fakeApi.resultAtRadius = mapOf(500 to "Park 500")
+        assertEquals("Park 500", repository.resolvePlaceName(0.0, 0.0))
+
+        // Case 3: Not at 200m or 500m, found at 1km
+        fakeApi.resultAtRadius = mapOf(1000 to "Mall 1000")
+        assertEquals("Mall 1000", repository.resolvePlaceName(0.0, 0.0))
+
+        // Case 4: Not found at all
+        fakeApi.resultAtRadius = emptyMap()
+        assertEquals("Unnamed area", repository.resolvePlaceName(0.0, 0.0))
+    }
+
+    class FakeOverpassApi : OverpassApi {
+        var resultAtRadius = mapOf<Int, String>()
+
+        override suspend fun query(data: String): OverpassResponse {
+            // Extract radius from query string "around:RADIUS,lat,lon"
+            val radiusStr = Regex("around:(\\d+)").find(data)?.groupValues?.get(1) ?: "0"
+            val radius = radiusStr.toInt()
+
+            val name = resultAtRadius[radius]
+            val elements = if (name != null) {
+                listOf(OverpassElement("node", 1L, 0.0, 0.0, mapOf("name" to name)))
+            } else {
+                emptyList()
+            }
+            return OverpassResponse(elements)
+        }
+    }
+}
+
+--- FILE: app/src/test/java/com/example/dotlog/data/VisitRepositoryTest.kt ---
+package com.example.dotlog.data
+
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+class VisitRepositoryTest {
+
+    private lateinit var repository: VisitRepository
+    private lateinit var fakeDao: FakeVisitDao
+
+    @Before
+    fun setUp() {
+        fakeDao = FakeVisitDao()
+        repository = VisitRepository(fakeDao)
+    }
+
+    @Test
+    fun `test Haversine distance`() {
+        // Distance between two points ~100m
+        // Lat: 0.0, Lon: 0.0
+        // Lat: 0.0009, Lon: 0.0 -> ~100.07m
+        val distance = LocationUtils.calculateDistance(0.0, 0.0, 0.0009, 0.0)
+        assertTrue("Distance should be around 100m", distance in 99.0..101.0)
+    }
+
+    @Test
+    fun `test addVisit inserts new visit when no previous visits`() = runBlocking {
+        repository.addVisit(0.0, 0.0, "Place A", 1000L)
+        assertEquals(1, fakeDao.visits.size)
+        assertEquals("Place A", fakeDao.visits[0].placeName)
+    }
+
+    @Test
+    fun `test addVisit updates latest visit when within 100m`() = runBlocking {
+        repository.addVisit(0.0, 0.0, "Place A", 1000L)
+
+        // Within 100m (0.0008 degrees lat is ~89m)
+        repository.addVisit(0.0008, 0.0, "Place A Updated", 2000L)
+
+        assertEquals(1, fakeDao.visits.size)
+        assertEquals("Place A Updated", fakeDao.visits[0].placeName)
+        assertEquals(2000L, fakeDao.visits[0].timestamp)
+    }
+
+    @Test
+    fun `test addVisit inserts new visit when beyond 100m`() = runBlocking {
+        repository.addVisit(0.0, 0.0, "Place A", 1000L)
+
+        // Beyond 100m (0.001 degrees lat is ~111m)
+        repository.addVisit(0.001, 0.0, "Place B", 2000L)
+
+        assertEquals(2, fakeDao.visits.size)
+        assertEquals("Place B", fakeDao.visits[1].placeName)
+    }
+
+    class FakeVisitDao : VisitDao {
+        val visits = mutableListOf<Visit>()
+        private val _visitsFlow = MutableStateFlow<List<Visit>>(emptyList())
+
+        override fun getAllVisits(): Flow<List<Visit>> = _visitsFlow.asStateFlow()
+
+        override suspend fun getLatestVisit(): Visit? = visits.lastOrNull()
+
+        override suspend fun insert(visit: Visit) {
+            visits.add(visit)
+            _visitsFlow.value = visits.toList()
+        }
+
+        override suspend fun update(visit: Visit) {
+            val index = visits.indexOfFirst { it.id == visit.id }
+            if (index != -1) {
+                visits[index] = visit
+            } else {
+                // If ID is 0 (not yet assigned by Room), we might need to handle this differently in a real DAO
+                // In our repo, we use the latestVisit which already has an ID if it came from the DB.
+                // For this fake, we'll just replace the last one if it matches the latestVisit pattern
+                visits[visits.size - 1] = visit
+            }
+            _visitsFlow.value = visits.toList()
+        }
+    }
+}
+
+--- FILE: app/src/androidTest/java/com/example/dotlog/ExampleInstrumentedTest.kt ---
+package com.example.dotlog
+
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.ext.junit.runners.AndroidJUnit4
+
+import org.junit.Test
+import org.junit.runner.RunWith
+
+import org.junit.Assert.*
+
+/**
+ * Instrumented test, which will execute on an Android device.
+ *
+ * See [testing documentation](http://d.android.com/tools/testing).
+ */
+@RunWith(AndroidJUnit4::class)
+class ExampleInstrumentedTest {
+    @Test
+    fun useAppContext() {
+        // Context of the app under test.
+        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
+        assertEquals("com.example.dotlog", appContext.packageName)
+    }
+}
+
+--- FILE: app/src/main/res/values/strings.xml ---
+<resources>
+    <string name="app_name">dotlog</string>
+</resources>
+
+--- FILE: app/src/main/res/values/colors.xml ---
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
+
+--- FILE: app/src/main/res/values/themes.xml ---
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.Dotlog" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
