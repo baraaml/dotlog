@@ -93,3 +93,13 @@ lessons live only in chat history.
   `onRequestPermissions: () -> Unit` and calls it when the user taps "Grant
   Permission". The actual `rememberLauncherForActivityResult` lives in
   `MainScreenRoot`.
+- **Map long-press overlay must be preserved in update block**: `MapEventsOverlay`
+  is added once in `remember` but gets filtered out in the `update` block's overlay
+  removal logic unless `it !is MapEventsOverlay` is included in the filter predicate.
+- **`rememberUpdatedState` for map callbacks**: The long-press callback lambda
+  inside `MapEventsOverlay` uses `rememberUpdatedState(onMapLongPress)` so that
+  recomposition with a new callback doesn't require recreating the overlay.
+- **Map long-press workflow**: Dispatches `OnMapLongClick` → ViewModel resolves
+  POI name via `poiRepository` → sets `pendingLogLocation` + `pendingLogPlaceName`
+  → `MainScreen` shows `AlertDialog` with coordinates + editable name →
+  `OnConfirmLogLocation(name)` logs visit. No zoom/animation on long-press.

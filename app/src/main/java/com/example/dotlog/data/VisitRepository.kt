@@ -34,4 +34,12 @@ class VisitRepository(private val visitDao: VisitDao) {
         )
         visitDao.insert(newVisit)
     }
+
+    suspend fun deleteVisit(visit: Visit) {
+        visitDao.delete(visit)
+    }
+
+    suspend fun updateVisit(visit: Visit) {
+        visitDao.update(visit)
+    }
 }

@@ -1,17 +1,19 @@
 package com.example.dotlog.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -26,8 +28,75 @@ import java.util.*
 fun VisitsList(
     modifier: Modifier = Modifier,
     visits: List<Visit>,
-    onVisitClick: (Visit) -> Unit
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onVisitClick: (Visit) -> Unit,
+    onEditVisit: (Visit) -> Unit,
+    onDeleteVisit: (Visit) -> Unit
 ) {
+    var showOptionsDialog by remember { mutableStateOf(false) }
+    var selectedVisit by remember { mutableStateOf<Visit?>(null) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editName by remember { mutableStateOf("") }
+
+    selectedVisit?.let { visit ->
+        if (showOptionsDialog) {
+            AlertDialog(
+                onDismissRequest = { showOptionsDialog = false },
+                title = { Text(visit.placeName) },
+                text = {
+                    Column {
+                        TextButton(
+                            onClick = {
+                                editName = visit.placeName
+                                showOptionsDialog = false
+                                showEditDialog = true
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Edit name") }
+                        TextButton(
+                            onClick = {
+                                showOptionsDialog = false
+                                onDeleteVisit(visit)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Delete", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { showOptionsDialog = false }) { Text("Cancel") }
+                }
+            )
+        }
+
+        if (showEditDialog) {
+            AlertDialog(
+                onDismissRequest = { showEditDialog = false },
+                title = { Text("Edit name") },
+                text = {
+                    OutlinedTextField(
+                        value = editName,
+                        onValueChange = { editName = it },
+                        label = { Text("Place name") },
+                        singleLine = true
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        onEditVisit(visit.copy(placeName = editName))
+                        showEditDialog = false
+                    }) { Text("Save") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showEditDialog = false }) { Text("Cancel") }
+                }
+            )
+        }
+    }
+
     Surface(
         modifier = modifier,
         shape = MaterialTheme.shapes.extraLarge,
@@ -35,6 +104,23 @@ fun VisitsList(
         tonalElevation = 2.dp
     ) {
         Column {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = { Text("Search places...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { onSearchQueryChange("") }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = MaterialTheme.shapes.medium
+            )
+
             if (visits.isEmpty()) {
                 EmptyVisitsState(Modifier.weight(1f))
             } else {
@@ -42,8 +128,15 @@ fun VisitsList(
                     modifier = Modifier.fillMaxSize().weight(1f),
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
-                    items(visits) { visit ->
-                        VisitItem(visit = visit, onClick = { onVisitClick(visit) })
+                    items(visits, key = { it.id }) { visit ->
+                        VisitItem(
+                            visit = visit,
+                            onClick = { onVisitClick(visit) },
+                            onLongClick = {
+                                selectedVisit = visit
+                                showOptionsDialog = true
+                            }
+                        )
                     }
                 }
             }
@@ -61,15 +154,16 @@ fun VisitsList(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun VisitItem(visit: Visit, onClick: () -> Unit) {
+fun VisitItem(visit: Visit, onClick: () -> Unit, onLongClick: () -> Unit) {
     val sdf = remember { SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()) }
     val dateString = remember(visit.timestamp) { sdf.format(Date(visit.timestamp)) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

@@ -4,7 +4,9 @@ import android.location.Location
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -20,6 +22,8 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.CopyrightOverlay
 import org.osmdroid.views.overlay.FolderOverlay
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.events.MapEventsReceiver
+import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.TilesOverlay
 @Composable
 fun MapViewCompose(
@@ -28,7 +32,8 @@ fun MapViewCompose(
     visits: List<Visit>,
     showHistory: Boolean,
     zoomTarget: Location?,
-    onZoomConsumed: () -> Unit
+    onZoomConsumed: () -> Unit,
+    onMapLongPress: (Double, Double) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
 
@@ -49,6 +54,17 @@ fun MapViewCompose(
             copyrightOverlay.setAlignRight(true)
             overlays.add(copyrightOverlay)
         }
+    }
+
+    val currentOnLongPress by rememberUpdatedState(onMapLongPress)
+    remember {
+        mapView.overlays.add(MapEventsOverlay(object : MapEventsReceiver {
+            override fun singleTapConfirmedHelper(p: GeoPoint): Boolean = false
+            override fun longPressHelper(p: GeoPoint): Boolean {
+                currentOnLongPress(p.latitude, p.longitude)
+                return true
+            }
+        }))
     }
 
     val currentMarker = remember {
@@ -94,7 +110,7 @@ fun MapViewCompose(
         update = { view ->
             // PRESERVE both CopyrightOverlay AND TilesOverlay
             // CopyOnWriteArrayList iterator does not support remove()
-            val toRemove = view.overlays.filter { it !is CopyrightOverlay && it !is TilesOverlay }
+            val toRemove = view.overlays.filter { it !is CopyrightOverlay && it !is TilesOverlay && it !is MapEventsOverlay }
             view.overlays.removeAll(toRemove)
 
             currentLocation?.let {

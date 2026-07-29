@@ -44,8 +44,5 @@ class DotlogApplication : Application() {
         val tileCache = File(baseDir, "tiles")
         if (!tileCache.exists()) tileCache.mkdirs()
         osmConfig.osmdroidTileCache = tileCache
-
-        // Also wipe tile cache to clear any cached 403 responses
-        tileCache.listFiles()?.forEach { it.deleteRecursively() }
     }
 }

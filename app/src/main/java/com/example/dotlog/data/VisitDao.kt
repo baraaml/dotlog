@@ -1,6 +1,7 @@
 package com.example.dotlog.data
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -20,4 +21,7 @@ interface VisitDao {
 
     @Update
     suspend fun update(visit: Visit)
+
+    @Delete
+    suspend fun delete(visit: Visit)
 }
