@@ -109,5 +109,10 @@ class VisitRepositoryTest {
             visits.removeAll { it.id == visit.id }
             _visitsFlow.value = visits.toList()
         }
+
+        override suspend fun insertAll(visits: List<Visit>) {
+            this.visits.addAll(visits)
+            _visitsFlow.value = this.visits.toList()
+        }
     }
 }
