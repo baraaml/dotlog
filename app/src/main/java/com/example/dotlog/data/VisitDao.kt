@@ -19,6 +19,9 @@ interface VisitDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(visit: Visit)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(visits: List<Visit>)
+
     @Update
     suspend fun update(visit: Visit)
 

@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dotlog.DotlogApplication
 import com.example.dotlog.data.LocationRepository
+import com.example.dotlog.data.SearchResult
 import com.example.dotlog.data.Visit
 import com.example.dotlog.data.VisitRepository
 import kotlinx.coroutines.channels.Channel
@@ -23,7 +24,11 @@ data class MainState(
     val searchQuery: String = "",
     val pendingLogLocation: Location? = null,
     val pendingLogPlaceName: String = "",
-    val isDarkMode: Boolean = false
+    val isDarkMode: Boolean = false,
+    val locationSearchQuery: String = "",
+    val locationSearchResults: List<SearchResult> = emptyList(),
+    val isLocationSearching: Boolean = false,
+    val recentSearches: List<String> = emptyList()          // NEW
 )
 
 sealed interface MainAction {
@@ -41,6 +46,12 @@ sealed interface MainAction {
     data class OnConfirmLogLocation(val placeName: String, val timestamp: Long) : MainAction
     data object OnDismissLogLocation : MainAction
     data object OnToggleDarkMode : MainAction
+    data class OnLocationSearchQueryChange(val query: String) : MainAction
+    data object OnClearLocationSearch : MainAction
+    data class OnLocationSearchResultClick(val result: SearchResult) : MainAction
+    data object OnClearRecentSearches : MainAction            // NEW
+    data class OnRecentSearchClick(val query: String) : MainAction // NEW
+
 }
 
 sealed interface MainEvent {
@@ -53,8 +64,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val locationRepository = LocationRepository(application)
     private val visitRepository = (application as DotlogApplication).repository
     private val poiRepository = (application as DotlogApplication).poiRepository
+    private val searchRepository = (application as DotlogApplication).searchRepository
 
     private val _state = MutableStateFlow(MainState())
+    private val locationSearchQueryFlow = MutableSharedFlow<String>(extraBufferCapacity = 1)
 
     val state: StateFlow<MainState> = combine(
         _state,
@@ -70,7 +83,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         val savedDarkMode = prefs.getBoolean("dark_mode", false)
-        _state.update { it.copy(isDarkMode = savedDarkMode) }
+        val savedRecents = loadRecentSearches()
+        _state.update { it.copy(isDarkMode = savedDarkMode, recentSearches = savedRecents) }
+
+        viewModelScope.launch {
+            locationSearchQueryFlow
+                .debounce(500)
+                .filter { it.length >= 2 }
+                .distinctUntilChanged()
+                .collectLatest { query ->
+                    _state.update { it.copy(isLocationSearching = true) }
+                    val results = searchRepository.search(query)
+                    _state.update { it.copy(locationSearchResults = results, isLocationSearching = false) }
+                }
+        }
 
         viewModelScope.launch {
             val initialLocation = withTimeoutOrNull(10_000) {
@@ -136,9 +162,63 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 prefs.edit().putBoolean("dark_mode", newMode).apply()
                 _state.update { it.copy(isDarkMode = newMode) }
             }
+            is MainAction.OnLocationSearchQueryChange -> {
+                _state.update { it.copy(locationSearchQuery = action.query) }
+                if (action.query.length >= 2) {
+                    locationSearchQueryFlow.tryEmit(action.query)
+                } else {
+                    _state.update { it.copy(locationSearchResults = emptyList(), isLocationSearching = false) }
+                }
+            }
+            MainAction.OnClearLocationSearch -> {
+                _state.update { it.copy(locationSearchQuery = "", locationSearchResults = emptyList(), isLocationSearching = false) }
+            }
+            is MainAction.OnLocationSearchResultClick -> {
+                val loc = Location("search").apply {
+                    latitude = action.result.latitude
+                    longitude = action.result.longitude
+                }
+                var updatedRecents: List<String> = emptyList()
+                _state.update {
+                    updatedRecents = listOf(action.result.displayName) +
+                            it.recentSearches.filter { v -> v != action.result.displayName }.take(4)
+                    it.copy(
+                        currentLocation = loc,
+                        zoomTarget = loc,
+                        currentPlaceName = action.result.displayName,
+                        locationSearchQuery = "",
+                        locationSearchResults = emptyList(),
+                        recentSearches = updatedRecents
+                    )
+                }
+                saveRecentSearches(updatedRecents)
+            }
+
+            MainAction.OnClearRecentSearches -> {
+                saveRecentSearches(emptyList())
+                _state.update { it.copy(recentSearches = emptyList()) }
+            }
+
+            is MainAction.OnRecentSearchClick -> {
+                _state.update { it.copy(locationSearchQuery = action.query) }
+                if (action.query.length >= 2) {
+                    locationSearchQueryFlow.tryEmit(action.query)
+                }
+            }
         }
     }
 
+
+    private fun loadRecentSearches(): List<String> {
+        return prefs.getString("recent_searches", "")
+            ?.split("|||")
+            ?.filter { it.isNotEmpty() }
+            ?: emptyList()
+    }
+
+    private fun saveRecentSearches(searches: List<String>) {
+        prefs.edit().putString("recent_searches", searches.joinToString("|||")).apply()
+    }
     private fun resolvePoi(lat: Double, lon: Double) {
         viewModelScope.launch {
             _state.update { it.copy(currentPlaceName = "Resolving...") }
@@ -151,7 +231,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _state.update { it.copy(currentPlaceName = "Refreshing...") }
             val location = locationRepository.requestSingleFreshLocation()
-            _state.update { it.copy(currentLocation = location, zoomTarget = null) }
+            _state.update { it.copy(currentLocation = location, zoomTarget = location) }
             location?.let { resolvePoi(it.latitude, it.longitude) }
         }
     }
@@ -173,6 +253,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun importVisits(csvContent: String) {
         viewModelScope.launch {
             val lines = csvContent.lines().filter { it.isNotBlank() }
+            val visits = mutableListOf<Visit>()
             for ((i, line) in lines.withIndex()) {
                 if (i == 0 && line.startsWith("latitude,")) continue
                 val parts = parseCsvLine(line)
@@ -181,7 +262,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val lon = parts[1].toDoubleOrNull() ?: continue
                 val name = parts[2]
                 val ts = parts[3].toLongOrNull() ?: continue
-                visitRepository.addVisit(lat, lon, name, ts)
+                visits.add(Visit(latitude = lat, longitude = lon, placeName = name, timestamp = ts))
+            }
+            if (visits.isNotEmpty()) {
+                visitRepository.addVisits(visits)
             }
         }
     }
@@ -190,9 +274,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val location = _state.value.currentLocation
         val placeName = _state.value.currentPlaceName
         if (location != null) {
+            val now = System.currentTimeMillis()
             viewModelScope.launch {
                 visitRepository.addVisit(
-                    location.latitude, location.longitude, placeName, System.currentTimeMillis()
+                    location.latitude, location.longitude, placeName, now
                 )
                 _events.send(MainEvent.VisitLogged)
             }
@@ -204,8 +289,15 @@ fun parseCsvLine(line: String): List<String> {
     val result = mutableListOf<String>()
     val current = StringBuilder()
     var inQuotes = false
-    for (ch in line) {
+    var i = 0
+    while (i < line.length) {
+        val ch = line[i]
         when {
+            ch == '"' && inQuotes && i + 1 < line.length && line[i + 1] == '"' -> {
+                current.append('"')
+                i += 2
+                continue
+            }
             ch == '"' -> inQuotes = !inQuotes
             ch == ',' && !inQuotes -> {
                 result.add(current.toString())
@@ -213,6 +305,7 @@ fun parseCsvLine(line: String): List<String> {
             }
             else -> current.append(ch)
         }
+        i++
     }
     result.add(current.toString())
     return result

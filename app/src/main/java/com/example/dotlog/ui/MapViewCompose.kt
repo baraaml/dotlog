@@ -5,8 +5,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -126,11 +128,14 @@ fun MapViewCompose(
         }
     )
 
+    var initialZoomDone by remember { mutableStateOf(false) }
+
     LaunchedEffect(currentLocation) {
-        if (zoomTarget == null && currentLocation != null) {
+        if (!initialZoomDone && currentLocation != null) {
             mapView.controller.animateTo(
                 GeoPoint(currentLocation.latitude, currentLocation.longitude)
             )
+            initialZoomDone = true
         }
     }
 

@@ -3,6 +3,7 @@ package com.example.dotlog
 import android.app.Application
 import com.example.dotlog.data.AppDatabase
 import com.example.dotlog.data.PoiRepository
+import com.example.dotlog.data.SearchRepository
 import com.example.dotlog.data.VisitRepository
 import org.osmdroid.config.Configuration
 import java.io.File
@@ -11,6 +12,7 @@ class DotlogApplication : Application() {
     val database by lazy { AppDatabase.getDatabase(this) }
     val repository by lazy { VisitRepository(database.visitDao()) }
     val poiRepository by lazy { PoiRepository.create() }
+    val searchRepository by lazy { SearchRepository.create() }
 
     override fun onCreate() {
         super.onCreate()
