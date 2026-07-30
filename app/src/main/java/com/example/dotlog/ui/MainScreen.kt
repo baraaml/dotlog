@@ -8,9 +8,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -19,8 +23,6 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.*
@@ -34,6 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -42,26 +46,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.dotlog.data.SearchResult
 import com.example.dotlog.data.Visit
 import com.example.dotlog.ui.theme.DotlogTheme
 import kotlinx.coroutines.flow.collectLatest
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.input.ImeAction
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.ui.focus.onFocusChanged
 
 @Composable
 fun MainScreenRoot(
@@ -572,25 +559,6 @@ private fun MainScreen(
     }
 }
 
-@Composable
-private fun PermissionRequestScreen(
-    onRequestPermissions: () -> Unit
-) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "Location permission is required to use this app.",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(16.dp)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onRequestPermissions) {
-                Text("Grant Permission")
-            }
-        }
-    }
-}
-
 private fun checkPermissions(context: android.content.Context): Boolean {
     return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 }
@@ -613,269 +581,5 @@ private fun MainScreenPreview() {
             ),
             onAction = {}
         )
-    }
-}
-
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun LocationSearchBar(
-    query: String,
-    isSearching: Boolean,
-    results: List<SearchResult>,
-    recentSearches: List<String>,
-    focused: Boolean,
-    onQueryChange: (String) -> Unit,
-    onClear: () -> Unit,
-    onResultClick: (SearchResult) -> Unit,
-    onRecentClick: (String) -> Unit,
-    onClearRecents: () -> Unit,
-    onFocusChanged: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val focusManager = LocalFocusManager.current
-
-    val showDropdown = results.isNotEmpty()
-            || (isSearching && query.length >= 2)
-            || (query.isEmpty() && focused && recentSearches.isNotEmpty())
-
-    BackHandler(enabled = showDropdown) {
-        onClear()
-        keyboardController?.hide()
-        focusManager.clearFocus()
-        onFocusChanged(false)
-    }
-
-    Column(modifier = modifier) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .onFocusChanged { onFocusChanged(it.isFocused) },
-            placeholder = { Text("Search places...") },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = null
-                )
-            },
-            trailingIcon = {
-                when {
-                    isSearching -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .padding(horizontal = 12.dp)
-                                .size(22.dp),
-                            strokeWidth = 2.dp
-                        )
-                    }
-                    query.isNotEmpty() -> {
-                        IconButton(onClick = {
-                            keyboardController?.hide()
-                            focusManager.clearFocus()
-                            onFocusChanged(false)
-                            onClear()
-                        }) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Clear search"
-                            )
-                        }
-                    }
-                }
-            },
-            singleLine = true,
-            shape = RoundedCornerShape(24.dp),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(
-                onSearch = {
-                    keyboardController?.hide()
-                    focusManager.clearFocus()
-                    onFocusChanged(false)
-                }
-            ),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                focusedContainerColor = MaterialTheme.colorScheme.surface
-            )
-        )
-
-        AnimatedVisibility(
-            visible = showDropdown,
-            enter = fadeIn(tween(150)) + expandVertically(tween(150)),
-            exit = fadeOut(tween(100)) + shrinkVertically(tween(100))
-        ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                when {
-                    isSearching && results.isEmpty() -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.size(28.dp))
-                        }
-                    }
-                    results.isNotEmpty() -> {
-                        LazyColumn(modifier = Modifier.heightIn(max = 280.dp)) {
-                            items(
-                                items = results,
-                                key = { it.displayName + it.latitude }
-                            ) { result ->
-                                SearchResultRow(
-                                    result = result,
-                                    onClick = {
-                                        keyboardController?.hide()
-                                        focusManager.clearFocus()
-                                        onFocusChanged(false)
-                                        onResultClick(result)
-                                    }
-                                )
-                                if (result != results.last()) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(horizontal = 16.dp),
-                                        color = MaterialTheme.colorScheme.outlineVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    query.isNotEmpty() && !isSearching -> {
-                        EmptySearchState(query = query)
-                    }
-                    query.isEmpty() && recentSearches.isNotEmpty() -> {
-                        RecentSearchesList(
-                            searches = recentSearches,
-                            onClick = {
-                                onRecentClick(it)
-                            },
-                            onClear = onClearRecents
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SearchResultRow(
-    result: SearchResult,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .semantics {
-                contentDescription = "${result.displayName}, ${result.type}"
-            }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Default.Place,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = result.displayName,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2
-            )
-            Text(
-                text = result.type,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun EmptySearchState(
-    query: String,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = Icons.Default.Search,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(28.dp)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "No places found for \"$query\"",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun RecentSearchesList(
-    searches: List<String>,
-    onClick: (String) -> Unit,
-    onClear: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Recent",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            TextButton(onClick = onClear) {
-                Text("Clear")
-            }
-        }
-        searches.forEach { search ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onClick(search) }
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.History,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = search,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
     }
 }

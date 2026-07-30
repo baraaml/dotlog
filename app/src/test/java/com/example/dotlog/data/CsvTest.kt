@@ -1,6 +1,5 @@
 package com.example.dotlog.data
 
-import com.example.dotlog.ui.parseCsvLine
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
