@@ -11,11 +11,17 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-class LocationRepository(context: Context) {
+interface LocationProvider {
+    suspend fun getCurrentLocation(): Location?
+    fun getLocationUpdates(intervalMillis: Long): Flow<Location>
+    suspend fun requestSingleFreshLocation(): Location?
+}
+
+class LocationRepository(context: Context) : LocationProvider {
     private val client = LocationServices.getFusedLocationProviderClient(context)
 
     @SuppressLint("MissingPermission")
-    suspend fun getCurrentLocation(): Location? {
+    override suspend fun getCurrentLocation(): Location? {
         return try {
             client.lastLocation.await() ?: client.getCurrentLocation(
                 Priority.PRIORITY_HIGH_ACCURACY,
@@ -27,7 +33,7 @@ class LocationRepository(context: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    fun getLocationUpdates(intervalMillis: Long): Flow<Location> = callbackFlow {
+    override fun getLocationUpdates(intervalMillis: Long): Flow<Location> = callbackFlow {
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMillis)
             .setMinUpdateIntervalMillis(intervalMillis / 2)
             .build()
@@ -46,7 +52,7 @@ class LocationRepository(context: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    suspend fun requestSingleFreshLocation(): Location? {
+    override suspend fun requestSingleFreshLocation(): Location? {
         val source = CancellationTokenSource()
         return try {
             client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, source.token).await()

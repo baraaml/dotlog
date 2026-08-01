@@ -177,19 +177,18 @@ fun VisitItem(visit: Visit, onClick: () -> Unit, onLongClick: () -> Unit) {
             Text(
                 text = visit.placeName,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = dateString,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Text(
             text = String.format(Locale.getDefault(), "%.4f, %.4f", visit.latitude, visit.longitude),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline,
-            modifier = Modifier.alpha(0.7f)
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.outline
         )
     }
 }

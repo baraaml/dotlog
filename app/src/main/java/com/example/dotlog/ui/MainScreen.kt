@@ -57,6 +57,7 @@ fun MainScreenRoot(
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    var pendingExportContent by remember { mutableStateOf<String?>(null) }
 
     var permissionsGranted by remember { mutableStateOf(checkPermissions(context)) }
 
@@ -75,6 +76,17 @@ fun MainScreenRoot(
         }
     }
 
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        uri?.let {
+            context.contentResolver.openOutputStream(it)?.use { outputStream ->
+                outputStream.write(pendingExportContent?.toByteArray() ?: ByteArray(0))
+            }
+        }
+        pendingExportContent = null
+    }
+
     LaunchedEffect(Unit) {
         if (!permissionsGranted) {
             permissionLauncher.launch(
@@ -88,12 +100,8 @@ fun MainScreenRoot(
             when (event) {
                 is MainEvent.VisitLogged -> snackbarHostState.showSnackbar("Visit logged")
                 is MainEvent.ExportReady -> {
-                    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                        type = "text/csv"
-                        putExtra(android.content.Intent.EXTRA_TEXT, event.csvContent)
-                        putExtra(android.content.Intent.EXTRA_SUBJECT, "dotLog visits export")
-                    }
-                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Export visits"))
+                    pendingExportContent = event.csvContent
+                    exportLauncher.launch("dotlog_visits_${System.currentTimeMillis() / 1000}.csv")
                 }
             }
         }
@@ -346,8 +354,10 @@ private fun MainScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                )
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
@@ -395,7 +405,11 @@ private fun MainScreen(
                     .fillMaxWidth()
                     .height(52.dp)
                     .semantics { contentDescription = "Log current visit" },
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -408,131 +422,11 @@ private fun MainScreen(
         }
 
         state.pendingLogLocation?.let { loc ->
-            var name by remember(loc) { mutableStateOf(state.pendingLogPlaceName) }
-            val now = Calendar.getInstance()
-            var selectedDateMillis by remember(loc) { mutableStateOf(now.timeInMillis) }
-            var selectedHour by remember(loc) { mutableStateOf(now.get(Calendar.HOUR_OF_DAY)) }
-            var selectedMinute by remember(loc) { mutableStateOf(now.get(Calendar.MINUTE)) }
-            var showDatePicker by remember { mutableStateOf(false) }
-            var showTimePicker by remember { mutableStateOf(false) }
-
-            val dateFormat = remember { SimpleDateFormat("EEE, MMM d, yyyy", Locale.getDefault()) }
-            val timeFormat = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
-
-            if (showDatePicker) {
-                val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDateMillis)
-                DatePickerDialog(
-                    onDismissRequest = { showDatePicker = false },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            datePickerState.selectedDateMillis?.let { selectedDateMillis = it }
-                            showDatePicker = false
-                        }) { Text("OK") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-                    }
-                ) {
-                    DatePicker(state = datePickerState)
-                }
-            }
-
-            if (showTimePicker) {
-                val timePickerState = rememberTimePickerState(
-                    initialHour = selectedHour,
-                    initialMinute = selectedMinute,
-                    is24Hour = false
-                )
-                AlertDialog(
-                    onDismissRequest = { showTimePicker = false },
-                    title = { Text("Select time") },
-                    text = { TimePicker(state = timePickerState) },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            selectedHour = timePickerState.hour
-                            selectedMinute = timePickerState.minute
-                            showTimePicker = false
-                        }) { Text("OK") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
-                    }
-                )
-            }
-
-            AlertDialog(
-                onDismissRequest = { onAction(MainAction.OnDismissLogLocation) },
-                title = { Text("Log this location?") },
-                text = {
-                    Column {
-                        Text(
-                            text = "%.6f, %.6f".format(loc.latitude, loc.longitude),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = name,
-                            onValueChange = { name = it },
-                            label = { Text("Place name") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Date & time",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = dateFormat.format(Date(selectedDateMillis)),
-                                onValueChange = {},
-                                readOnly = true,
-                                singleLine = true,
-                                modifier = Modifier.weight(1f),
-                                label = { Text("Date") }
-                            )
-                            OutlinedTextField(
-                                value = timeFormat.format(
-                                    remember(selectedHour, selectedMinute) {
-                                        Date(
-                                            Calendar.getInstance().apply {
-                                                set(Calendar.HOUR_OF_DAY, selectedHour)
-                                                set(Calendar.MINUTE, selectedMinute)
-                                            }.timeInMillis
-                                        )
-                                    }
-                                ),
-                                onValueChange = {},
-                                readOnly = true,
-                                singleLine = true,
-                                modifier = Modifier.weight(1f),
-                                label = { Text("Time") }
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextButton(onClick = { showDatePicker = true }) { Text("Change date") }
-                            TextButton(onClick = { showTimePicker = true }) { Text("Change time") }
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(onClick = {
-                        val cal = Calendar.getInstance().apply {
-                            timeInMillis = selectedDateMillis
-                            set(Calendar.HOUR_OF_DAY, selectedHour)
-                            set(Calendar.MINUTE, selectedMinute)
-                            set(Calendar.SECOND, 0)
-                            set(Calendar.MILLISECOND, 0)
-                        }
-                        onAction(MainAction.OnConfirmLogLocation(name, cal.timeInMillis))
-                    }) { Text("Confirm") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { onAction(MainAction.OnDismissLogLocation) }) { Text("Cancel") }
-                }
+            LogLocationDialog(
+                location = loc,
+                placeName = state.pendingLogPlaceName,
+                onConfirm = { name, ts -> onAction(MainAction.OnConfirmLogLocation(name, ts)) },
+                onDismiss = { onAction(MainAction.OnDismissLogLocation) }
             )
         }
 
@@ -557,6 +451,156 @@ private fun MainScreen(
             )
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LogLocationDialog(
+    location: Location,
+    placeName: String,
+    onConfirm: (String, Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember(location) { mutableStateOf(placeName) }
+    var hasUserEditedName by remember(location) { mutableStateOf(false) }
+
+    // Patch in resolved place name if user hasn't edited it yet
+    LaunchedEffect(placeName) {
+        if (!hasUserEditedName && name != placeName) {
+            name = placeName
+        }
+    }
+
+    val now = Calendar.getInstance()
+    var selectedDateMillis by remember(location) { mutableStateOf(now.timeInMillis) }
+    var selectedHour by remember(location) { mutableStateOf(now.get(Calendar.HOUR_OF_DAY)) }
+    var selectedMinute by remember(location) { mutableStateOf(now.get(Calendar.MINUTE)) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    val dateFormat = remember { SimpleDateFormat("EEE, MMM d, yyyy", Locale.getDefault()) }
+    val timeFormat = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+
+    // Pre-initializing states inside this component prevents re-init lag during MainScreen recompositions
+    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDateMillis)
+    val timePickerState = rememberTimePickerState(
+        initialHour = selectedHour,
+        initialMinute = selectedMinute,
+        is24Hour = false
+    )
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { selectedDateMillis = it }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    if (showTimePicker) {
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            title = { Text("Select time") },
+            text = { TimePicker(state = timePickerState) },
+            confirmButton = {
+                TextButton(onClick = {
+                    selectedHour = timePickerState.hour
+                    selectedMinute = timePickerState.minute
+                    showTimePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Log this location?") },
+        text = {
+            Column {
+                Text(
+                    text = "%.6f, %.6f".format(location.latitude, location.longitude),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = {
+                        name = it
+                        hasUserEditedName = true
+                    },
+                    label = { Text("Place name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Date & time",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = dateFormat.format(Date(selectedDateMillis)),
+                        onValueChange = {},
+                        readOnly = true,
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        label = { Text("Date") }
+                    )
+                    OutlinedTextField(
+                        value = timeFormat.format(
+                            remember(selectedHour, selectedMinute) {
+                                Date(
+                                    Calendar.getInstance().apply {
+                                        set(Calendar.HOUR_OF_DAY, selectedHour)
+                                        set(Calendar.MINUTE, selectedMinute)
+                                    }.timeInMillis
+                                )
+                            }
+                        ),
+                        onValueChange = {},
+                        readOnly = true,
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        label = { Text("Time") }
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { showDatePicker = true }) { Text("Change date") }
+                    TextButton(onClick = { showTimePicker = true }) { Text("Change time") }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                val cal = Calendar.getInstance().apply {
+                    timeInMillis = selectedDateMillis
+                    set(Calendar.HOUR_OF_DAY, selectedHour)
+                    set(Calendar.MINUTE, selectedMinute)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                onConfirm(name, cal.timeInMillis)
+            }) { Text("Confirm") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 private fun checkPermissions(context: android.content.Context): Boolean {

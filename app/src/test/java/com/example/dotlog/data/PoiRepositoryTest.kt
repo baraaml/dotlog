@@ -13,19 +13,19 @@ class PoiRepositoryTest {
 
         // Case 1: Found at 200m
         fakeApi.resultAtRadius = mapOf(200 to "Cafe 200")
-        assertEquals("Cafe 200", repository.resolvePlaceName(0.0, 0.0))
+        assertEquals("Cafe 200", repository.resolvePlaceName(1.0, 1.0))
 
         // Case 2: Not at 200m, found at 500m
         fakeApi.resultAtRadius = mapOf(500 to "Park 500")
-        assertEquals("Park 500", repository.resolvePlaceName(0.0, 0.0))
+        assertEquals("Park 500", repository.resolvePlaceName(2.0, 2.0))
 
         // Case 3: Not at 200m or 500m, found at 1km
         fakeApi.resultAtRadius = mapOf(1000 to "Mall 1000")
-        assertEquals("Mall 1000", repository.resolvePlaceName(0.0, 0.0))
+        assertEquals("Mall 1000", repository.resolvePlaceName(3.0, 3.0))
 
         // Case 4: Not found at all
         fakeApi.resultAtRadius = emptyMap()
-        assertEquals("Unnamed area", repository.resolvePlaceName(0.0, 0.0))
+        assertEquals("Unnamed area", repository.resolvePlaceName(4.0, 4.0))
     }
 
     class FakeOverpassApi : OverpassApi {

@@ -2,11 +2,15 @@ package com.example.dotlog.ui
 
 import android.app.Application
 import android.content.Context
+import android.content.SharedPreferences
 import android.location.Location
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dotlog.DotlogApplication
+import com.example.dotlog.data.LocationProvider
 import com.example.dotlog.data.LocationRepository
+import com.example.dotlog.data.PoiRepository
+import com.example.dotlog.data.SearchRepository
 import com.example.dotlog.data.SearchResult
 import com.example.dotlog.data.Visit
 import com.example.dotlog.data.VisitRepository
@@ -60,15 +64,21 @@ sealed interface MainEvent {
     data class ExportReady(val csvContent: String) : MainEvent
 }
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
-    private val prefs = application.getSharedPreferences("dotlog_prefs", Context.MODE_PRIVATE)
-    private val locationRepository = LocationRepository(application)
-    private val visitRepository = (application as DotlogApplication).repository
-    private val poiRepository = (application as DotlogApplication).poiRepository
-    private val searchRepository = (application as DotlogApplication).searchRepository
+class MainViewModel @JvmOverloads constructor(
+    application: Application,
+    private val visitRepository: VisitRepository = (application as DotlogApplication).repository,
+    private val poiRepository: PoiRepository = (application as DotlogApplication).poiRepository,
+    private val searchRepository: SearchRepository = (application as DotlogApplication).searchRepository,
+    private val locationRepository: LocationProvider = LocationRepository(application),
+    private val prefs: SharedPreferences = application.getSharedPreferences("dotlog_prefs", Context.MODE_PRIVATE)
+) : AndroidViewModel(application) {
 
-    private val _state = MutableStateFlow(MainState())
+    internal val _state = MutableStateFlow(MainState())
     private val locationSearchQueryFlow = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
+    // Monotonic token for long-press resolution — lets a slow Overpass lookup know
+    // whether its dialog is still the current one when it finally completes.
+    private var longPressToken = 0L
 
     val state: StateFlow<MainState> = combine(
         _state,
@@ -133,13 +143,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             is MainAction.OnImportVisits -> importVisits(action.csvContent)
             MainAction.OnZoomConsumed -> _state.update { it.copy(zoomTarget = null) }
             is MainAction.OnMapLongClick -> {
+                val currentPending = _state.value.pendingLogLocation
+                // Avoid redundant requests if user clicks the exact same spot twice
+                if (currentPending?.latitude == action.latitude && currentPending?.longitude == action.longitude) {
+                    android.util.Log.d("MainViewModel", "Ignoring duplicate long-click at same location.")
+                    return
+                }
+
+                val token = ++longPressToken
+                android.util.Log.d("MainViewModel", "Long click at ${action.latitude}, ${action.longitude}, token: $token")
+                
                 val loc = Location("longPress").apply {
                     latitude = action.latitude
                     longitude = action.longitude
                 }
+                
+                _state.update { it.copy(pendingLogLocation = loc, pendingLogPlaceName = "Resolving...") }
+                
                 viewModelScope.launch {
-                    val name = poiRepository.resolvePlaceName(action.latitude, action.longitude)
-                    _state.update { it.copy(pendingLogLocation = loc, pendingLogPlaceName = name) }
+                    try {
+                        val name = poiRepository.resolvePlaceName(action.latitude, action.longitude)
+                        if (token == longPressToken) {
+                            _state.update { current ->
+                                if (current.pendingLogLocation != null) {
+                                    android.util.Log.d("MainViewModel", "Updating place name for token $token: $name")
+                                    current.copy(pendingLogPlaceName = name)
+                                } else {
+                                    android.util.Log.w("MainViewModel", "Dialog dismissed before resolution finished for token $token")
+                                    current
+                                }
+                            }
+                        } else {
+                            android.util.Log.w("MainViewModel", "Stale resolution ignored. Current token: $longPressToken, token: $token")
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("MainViewModel", "Unexpected crash in resolution job: ${e.message}")
+                    }
                 }
             }
             is MainAction.OnConfirmLogLocation -> {

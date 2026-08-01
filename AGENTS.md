@@ -35,8 +35,9 @@ lessons live only in chat history.
 - **Initial location waits for a fresh GPS fix (max 15s).** Uses
   `getLocationUpdates(1000).filter(age < 30s && accuracy < 100m).first()`.
   Stale `lastLocation` (off by continents) is never consumed.
-- **Overpass public instance is rate-limited.** POI lookups only happen once on launch
-  (initial GPS fix) — keep it that way.
+- **Overpass public instance is rate-limited.** POI lookups happen on launch
+  (initial GPS fix) and on map long-press only — keep it that way. Never add
+  per-render or continuous POI lookups.
 - **`_state` and `visitRepository.allVisits` are combined via `combine()`** into the
   single `state: StateFlow`. Don't add separate StateFlows — merge into `_state`.
 - English only for MVP — don't hardcode strings in a way that blocks future Arabic
@@ -99,7 +100,33 @@ lessons live only in chat history.
 - **`rememberUpdatedState` for map callbacks**: The long-press callback lambda
   inside `MapEventsOverlay` uses `rememberUpdatedState(onMapLongPress)` so that
   recomposition with a new callback doesn't require recreating the overlay.
-- **Map long-press workflow**: Dispatches `OnMapLongClick` → ViewModel resolves
-  POI name via `poiRepository` → sets `pendingLogLocation` + `pendingLogPlaceName`
-  → `MainScreen` shows `AlertDialog` with coordinates + editable name →
-  `OnConfirmLogLocation(name)` logs visit. No zoom/animation on long-press.
+- **Map long-press workflow**: Dispatches `OnMapLongClick` → ViewModel sets
+  `pendingLogLocation` + `pendingLogPlaceName = "Resolving..."` **immediately**
+  (dialog appears instantly, never blocked on the slow rate-limited Overpass
+  lookup) → POI name resolves in the background and is patched in via a
+  `longPressToken` guard → `MainScreen` shows `AlertDialog` with coordinates +
+  editable name → `OnConfirmLogLocation(name)` logs visit. No zoom/animation on
+  long-press.
+- **Long-press resolution guard uses a token, NOT `Location` equality.**
+  `longPressToken` increments on every long-press; a slow lookup only patches the
+  name if `token == longPressToken` AND `pendingLogLocation != null` (dialog not
+  dismissed/replaced). Don't switch to comparing `Location` instances — it breaks
+  under unit tests (mockable android.jar stubs `Location.equals()` to always
+  return `false`).
+- **`MainViewModel` is constructor-injectable.** Params
+  (`visitRepository`, `poiRepository`, `searchRepository`, `locationRepository:
+  LocationProvider`, `prefs`) have defaults wired to `DotlogApplication`, so
+  production still uses `viewModel()` untouched but tests inject fakes.
+  `LocationProvider` interface exists so tests never construct the real
+  play-services `LocationRepository` (its constructor calls
+  `LocationServices.getFusedLocationProviderClient` and throws in JVM tests).
+- **Unit tests need `isReturnDefaultValues = true`** (set in `app/build.gradle.kts`
+  testOptions). The mockable android.jar makes Android methods throw by default;
+  this makes them return default values (0/null/false) so `Location("...")`
+  construction and setters work in JVM tests.
+- **ViewModel tests use `runTest(dispatcher)` + `Dispatchers.setMain(dispatcher)`.**
+  See `MainViewModelTest`. The fake location provider's `getLocationUpdates`
+  returns `flow { awaitCancellation() }` (never emits/completes) — do NOT use
+  `emptyFlow()`, because `Flow.first()` on a completed empty flow throws
+  `NoSuchElementException`, which crashes the VM init coroutine and surfaces as a
+  test failure during `advanceUntilIdle()`.

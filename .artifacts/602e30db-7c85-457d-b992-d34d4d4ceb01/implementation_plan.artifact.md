@@ -1,32 +1,21 @@
-# Implementation Plan - Fix OSM Tile Block
+# Implementation Plan - Fix App Startup Crash (MainViewModel Constructor)
 
-The user is still seeing "Access Blocked" on the map. This is a strict enforcement of the OpenStreetMap Tile Usage Policy. We need to ensure the `User-Agent` is set correctly and early, and that we are following all technical requirements.
-
-## User Review Required
-
-> [!IMPORTANT]
-> I am moving the `osmdroid` configuration to the `Application` class to ensure it's applied before any UI component (like `MapView`) is initialized.
+The app is crashing at startup with a `NoSuchMethodException` when trying to instantiate `MainViewModel`. This is because `AndroidViewModelFactory` expects a constructor that takes a single `Application` parameter, but since `MainViewModel` uses Kotlin default parameters without `@JvmOverloads`, it only exposes a 6-argument constructor to the JVM reflection used by the factory.
 
 ## Proposed Changes
 
-### Configuration
+### UI Layer
 
-#### [MODIFY] [DotlogApplication.kt](file:///home/baraa/AndroidStudioProjects/dotlog/app/src/main/java/com/example/dotlog/DotlogApplication.kt)
-- Initialize `osmdroid` configuration here.
-- Set a unique and descriptive `User-Agent`.
-- Configure internal cache paths.
-
-#### [MODIFY] [MainActivity.kt](file:///home/baraa/AndroidStudioProjects/dotlog/app/src/main/java/com/example/dotlog/MainActivity.kt)
-- Remove the configuration logic from `onCreate` (it's now in the Application class).
-
-### UI
-
-#### [MODIFY] [MapViewCompose.kt](file:///home/baraa/AndroidStudioProjects/dotlog/app/src/main/java/com/example/dotlog/ui/MapViewCompose.kt)
-- Ensure the `MapView` uses the global configuration.
+#### [MODIFY] [MainViewModel.kt](file:///home/baraa/AndroidStudioProjects/dotlog/app/src/main/java/com/example/dotlog/ui/MainViewModel.kt)
+- Add `@JvmOverloads` annotation to the `MainViewModel` constructor.
+- This will generate the necessary overloaded constructors, including the one taking only `Application`, allowing `ViewModelProvider` to successfully instantiate it.
 
 ## Verification Plan
 
+### Automated Tests
+- Run unit tests to ensure no regressions in ViewModel logic:
+  - `./gradlew testDebugUnitTest`
+
 ### Manual Verification
-- Clear App Cache and Data.
-- Restart the app.
-- Check if map tiles load without the "Access Blocked" overlay.
+- Rebuild the app and ensure it no longer crashes on startup.
+- Note: This fix addresses the specific `NoSuchMethodException` reported in the logs.
