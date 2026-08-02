@@ -33,7 +33,8 @@ data class MainState(
     val locationSearchQuery: String = "",
     val locationSearchResults: List<SearchResult> = emptyList(),
     val isLocationSearching: Boolean = false,
-    val recentSearches: List<String> = emptyList()          // NEW
+    val recentSearches: List<String> = emptyList(),
+    val selectedVisit: Visit? = null                  // NEW
 )
 
 sealed interface MainAction {
@@ -54,8 +55,10 @@ sealed interface MainAction {
     data class OnLocationSearchQueryChange(val query: String) : MainAction
     data object OnClearLocationSearch : MainAction
     data class OnLocationSearchResultClick(val result: SearchResult) : MainAction
-    data object OnClearRecentSearches : MainAction            // NEW
-    data class OnRecentSearchClick(val query: String) : MainAction // NEW
+    data object OnClearRecentSearches : MainAction
+    data class OnRecentSearchClick(val query: String) : MainAction
+    data class OnVisitMarkerClick(val visit: Visit) : MainAction
+    data object OnDismissVisitMarker : MainAction
 
 }
 
@@ -129,7 +132,8 @@ class MainViewModel @JvmOverloads constructor(
                     latitude = action.latitude
                     longitude = action.longitude
                 }
-                _state.update { it.copy(zoomTarget = loc, showHistoryOnMap = true) }
+                val visit = state.value.visits.find { it.latitude == action.latitude && it.longitude == action.longitude }
+                _state.update { it.copy(zoomTarget = loc, showHistoryOnMap = true, selectedVisit = visit) }
             }
             is MainAction.OnEditVisit -> {
                 viewModelScope.launch { visitRepository.updateVisit(action.visit) }
@@ -244,6 +248,14 @@ class MainViewModel @JvmOverloads constructor(
                 if (action.query.length >= 2) {
                     locationSearchQueryFlow.tryEmit(action.query)
                 }
+            }
+            
+            is MainAction.OnVisitMarkerClick -> {
+                _state.update { it.copy(selectedVisit = action.visit) }
+            }
+            
+            MainAction.OnDismissVisitMarker -> {
+                _state.update { it.copy(selectedVisit = null) }
             }
         }
     }

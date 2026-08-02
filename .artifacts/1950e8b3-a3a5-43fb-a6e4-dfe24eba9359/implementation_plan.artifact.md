@@ -1,38 +1,30 @@
-# Implementation Plan - OSM Tile Usage Policy Compliance
+# Implementation Plan - Simplified Map Interaction
 
-Review and update the application to strictly follow the [OpenStreetMap Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/).
-
-## User Review Required
-
-> [!NOTE]
-> I will be updating the User-Agent string to include a placeholder contact email. You should replace `developer@example.com` with your real contact email later if you publish this app.
+This plan simplifies the UI by removing the dedicated bottom info card and instead using the existing top status card to show details when a map marker is selected. It also removes the default "grey rectangle" (osmdroid InfoWindow).
 
 ## Proposed Changes
 
-### [Component] Application Configuration
-
-#### [MODIFY] [DotlogApplication.kt](file:///home/baraa/AndroidStudioProjects/dotlog/app/src/main/java/com/example/dotlog/DotlogApplication.kt)
-- Update `userAgentValue` to include a contact point as recommended by the policy.
-- Ensure caching configuration remains within the internal `cacheDir`.
-
-### [Component] UI - Map Layer
+### [Component] Map UI
 
 #### [MODIFY] [MapViewCompose.kt](file:///home/baraa/AndroidStudioProjects/dotlog/app/src/main/java/com/example/dotlog/ui/MapViewCompose.kt)
-- Add `CopyrightOverlay` to the `MapView`.
-- Modify the `AndroidView` `update` block to preserve the `CopyrightOverlay` instead of calling `view.overlays.clear()`.
+- **Disable InfoWindows**: Explicitly disable the default osmdroid popups for all markers by returning `true` in click listeners and ensuring no default info windows are attached.
+- **Marker Synchronization**: Ensure the "You are here" marker also respects the no-popup rule.
 
-### [Component] UI - Info Panel
+### [Component] Main Screen & Overlays
 
-#### [MODIFY] [VisitsList.kt](file:///home/baraa/AndroidStudioProjects/dotlog/app/src/main/java/com/example/dotlog/ui/VisitsList.kt)
-- Add a "Report a map issue" link/button at the bottom of the list, pointing to `https://www.openstreetmap.org/fixthemap`.
+#### [MODIFY] [MainScreen.kt](file:///home/baraa/AndroidStudioProjects/dotlog/app/src/main/java/com/example/dotlog/ui/MainScreen.kt)
+- **Remove `SelectedVisitCard`**: Delete the bottom-sliding card and its animation logic.
+- **Enhance Top Status Card**:
+    - If `selectedVisit` is null: Show "Live Tracking" and current POI (current behavior).
+    - If `selectedVisit` is NOT null: Show the selected place name, the date/time of that visit, and a **"Dismiss" (X) button** to return to live mode.
+- **DatePicker Optimization**: Move the `DatePickerState` initialization to be more lifecycle-aware to eliminate the animation hitch.
 
 ## Verification Plan
 
 ### Automated Tests
-- Run unit tests to ensure no regressions in visit logging.
-- `./gradlew testDebugUnitTest`
+- Run existing unit tests: `./gradlew testDebugUnitTest`
 
 ### Manual Verification
-- **User-Agent:** Verify the updated User-Agent is being sent (can be checked via Logcat or a network interceptor if available).
-- **Attribution:** Verify that the "© OpenStreetMap contributors" text is clearly visible on the map.
-- **Reporting Link:** Verify that the "Report map issue" link appears and opens the browser to the correct URL.
+- **Marker Click**: Tap a marker. Verify NO grey rectangle appears, and the **Top Card** updates with that location's details.
+- **Deselection**: Tap the "X" on the top card. Verify it returns to showing "Live Tracking" or "Searching...".
+- **Lag Check**: Tap "Change date" in the long-press dialog. Confirm it opens instantly.

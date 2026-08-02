@@ -48,7 +48,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dotlog.data.Visit
 import com.example.dotlog.ui.theme.DotlogTheme
+import com.example.dotlog.ui.theme.SuccessGreen
 import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun MainScreenRoot(
@@ -153,14 +155,18 @@ private fun MainScreen(
             currentLocation = state.currentLocation,
             visits = state.visits,
             showHistory = state.showHistoryOnMap,
+            selectedVisit = state.selectedVisit,
             zoomTarget = state.zoomTarget,
             onZoomConsumed = { onAction(MainAction.OnZoomConsumed) },
+            onVisitMarkerClick = { onAction(MainAction.OnVisitMarkerClick(it)) },
+            onMapClick = { onAction(MainAction.OnDismissVisitMarker) },
             onMapLongPress = { lat, lon -> onAction(MainAction.OnMapLongClick(lat, lon)) }
         )
 
-        // SCRIM: dismiss search when tapping outside
+        // SCRIM: dismiss search or marker selection when tapping outside
+        val showScrim = showSearchDropdown || state.selectedVisit != null
         AnimatedVisibility(
-            visible = showSearchDropdown,
+            visible = showScrim,
             enter = fadeIn(),
             exit = fadeOut()
         ) {
@@ -177,8 +183,11 @@ private fun MainScreen(
                             if (state.locationSearchResults.isNotEmpty()) {
                                 onAction(MainAction.OnClearLocationSearch)
                             }
+                            if (state.selectedVisit != null) {
+                                onAction(MainAction.OnDismissVisitMarker)
+                            }
                         }
-                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.32f))
+                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = if (showSearchDropdown) 0.32f else 0.0f))
                 )
         }
 
@@ -356,39 +365,72 @@ private fun MainScreen(
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = if (state.selectedVisit != null) 
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f)
+                    else 
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
                 )
             ) {
+                val displayPlaceName = state.selectedVisit?.placeName ?: state.currentPlaceName
+                val displaySubtitle = if (state.selectedVisit != null) {
+                    val sdf = remember { SimpleDateFormat("MMM dd, yyyy • h:mm a", Locale.getDefault()) }
+                    sdf.format(Date(state.selectedVisit.timestamp))
+                } else {
+                    if (state.currentLocation != null) "Live Tracking" else "Tracking Paused"
+                }
+
                 Row(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .background(
+                                when {
+                                    state.selectedVisit != null -> MaterialTheme.colorScheme.primary
+                                    state.currentLocation != null -> SuccessGreen
+                                    else -> Color.Gray
+                                },
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            )
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = state.currentPlaceName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            text = displaySubtitle,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (state.selectedVisit != null) 
+                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                            else 
+                                MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        state.currentLocation?.let {
-                            Text(
-                                text = "%.6f, %.6f".format(it.latitude, it.longitude),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Text(
+                            text = displayPlaceName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (state.selectedVisit != null) 
+                                MaterialTheme.colorScheme.onPrimaryContainer 
+                            else 
+                                MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    
+                    if (state.selectedVisit != null) {
+                        IconButton(onClick = { onAction(MainAction.OnDismissVisitMarker) }) {
+                            Icon(
+                                Icons.Default.Close, 
+                                contentDescription = "Return to live",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
-                    }
-                    IconButton(onClick = { onAction(MainAction.OnRefreshLocation) }) {
-                        Icon(
-                            imageVector = Icons.Default.MyLocation,
-                            contentDescription = "Refresh location"
-                        )
+                    } else {
+                        IconButton(onClick = { onAction(MainAction.OnRefreshLocation) }) {
+                            Icon(
+                                imageVector = Icons.Default.MyLocation,
+                                contentDescription = "Refresh location"
+                            )
+                        }
                     }
                 }
             }
@@ -481,8 +523,12 @@ private fun LogLocationDialog(
     val dateFormat = remember { SimpleDateFormat("EEE, MMM d, yyyy", Locale.getDefault()) }
     val timeFormat = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
 
-    // Pre-initializing states inside this component prevents re-init lag during MainScreen recompositions
-    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDateMillis)
+    // Pre-initializing states inside this component prevents re-init lag
+    // Using a key for the state ensures it only resets when the selected location actually changes
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = selectedDateMillis,
+        yearRange = 2020..2030 // Small optimization: limit range
+    )
     val timePickerState = rememberTimePickerState(
         initialHour = selectedHour,
         initialMinute = selectedMinute,
